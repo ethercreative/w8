@@ -6,7 +6,6 @@ class W8Plugin extends BasePlugin
 {
 
 	static $weightHandle;
-	static $oldOrder;
 	static $after;
 
 	public function getName ()
@@ -106,8 +105,7 @@ class W8Plugin extends BasePlugin
 				$afterHandle = ' desc,' . $afterHandle;
 			}
 
-			static::$oldOrder = $old;
-			static::$weightHandle = str_replace('|', '_', $old);
+			static::$weightHandle = bin2hex($old);
 			static::$after = $afterHandle;
 
 			$criteria->setAttribute(
@@ -133,7 +131,7 @@ class W8Plugin extends BasePlugin
 
 			$weightHandle = static::$weightHandle;
 
-			$fields = explode('_', static::$weightHandle);
+			$fields = explode('|', hex2bin(static::$weightHandle));
 
 			if (count($fields) == 1)
 				$fields = ['self'];
@@ -150,7 +148,7 @@ class W8Plugin extends BasePlugin
 					continue;
 
 				if (!$depth)
-					$depth = 999;
+					$depth = '<=999';
 
 				if ($name == 'self' || array_key_exists($name, $allFields))
 					$fieldsByHandle[$name] = compact('name', 'depth');
@@ -184,8 +182,14 @@ class W8Plugin extends BasePlugin
 					$selects[] = "COALESCE(SUM({$table}_{$i}.weight), 0)";
 					$joins[] = "LEFT JOIN `{$table}` `{$table}_{$i}` 
 	ON {$table}_{$i}.elementId 
-		IN (SELECT targetId FROM `craft_relations` WHERE fieldId IN ({$fieldIds}) AND sourceId = {$table}_a.{$source})
-		AND {$table}_{$i}.depth <= {$field['depth']}";
+		IN (SELECT targetId FROM `craft_relations` WHERE fieldId IN ({$fieldIds}) AND sourceId = {$table}_a.{$source} AND sortOrder {$field['depth']})
+		AND {$table}_{$i}.depth {$field['depth']}";
+					// NOTE: By setting sortOrder equal to whatever depth is we
+					// should, hypothetically, only get the first category of
+					// the specified depth
+					// TODO[improve]: find a way to give matching categories higher priority
+					// e.g. If an entry has CatA & CatB, and we are sorting
+					// CatB then CatA, CatA on the entry should have a lower weight
 					$i++;
 				}
 			}
