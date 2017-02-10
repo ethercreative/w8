@@ -66,9 +66,9 @@ class W8Plugin extends BasePlugin
 			$element = $event->params['element'];
 
 			if (!in_array(
-					$element->getElementType(),
-					['Entry', 'Category', 'Commerce_Product']
-				))
+				$element->getElementType(),
+				['Entry', 'Category', 'Commerce_Product']
+			))
 				return;
 
 			if ($element->getElementType() == 'Category') {
@@ -107,7 +107,7 @@ class W8Plugin extends BasePlugin
 			}
 
 			static::$oldOrder = $old;
-			static::$weightHandle = 'w8';
+			static::$weightHandle = str_replace('|', '_', $old);
 			static::$after = $afterHandle;
 
 			$criteria->setAttribute(
@@ -133,7 +133,7 @@ class W8Plugin extends BasePlugin
 
 			$weightHandle = static::$weightHandle;
 
-			$fields = explode('|', static::$oldOrder);
+			$fields = explode('_', static::$weightHandle);
 
 			if (count($fields) == 1)
 				$fields = ['self'];
@@ -159,8 +159,12 @@ class W8Plugin extends BasePlugin
 			$selects = [];
 			$joins = [];
 
-			$fieldsCount = count($fieldsByHandle);
 			$hasSelf = array_key_exists('self', $fieldsByHandle);
+
+			if ($hasSelf)
+				unset($fieldsByHandle['self']);
+
+			$fieldsCount = count($fieldsByHandle);
 
 			$fieldIds = [];
 			foreach ($fieldsByHandle as $field) if (array_key_exists($field['name'], $allFields)) {
@@ -205,9 +209,9 @@ FROM `{$tablePrefix}elements` `{$table}_a`
 WHERE {$table}_a.id = elements.id";
 			}
 
-			$query->addSelect("\r\n({$select}) as {$weightHandle}");
-
-//			static::log(print_r($query->getText(), true));
+			$finalSelect = "\r\n({$select}) as {$weightHandle}";
+//			static::log(print_r($finalSelect, true));
+			$query->addSelect($finalSelect);
 		});
 	}
 
